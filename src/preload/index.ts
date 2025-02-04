@@ -11,6 +11,9 @@ if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
+    contextBridge.exposeInMainWorld("env", {
+      API_URL: process.env.VITE_API_URL,
+    });
   } catch (error) {
     console.error(error)
   }
