@@ -1,9 +1,7 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, session } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-
-
 
 function createWindow(): void {
   // Create the browser window.
@@ -15,12 +13,28 @@ function createWindow(): void {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      nodeIntegration: true,
-      sandbox: false,
-      contextIsolation: false,
-      webSecurity: false
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
     }
   })
+
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          `default-src 'self' https://jsonplaceholder.typicode.com; ` +
+          `script-src 'self' 'unsafe-inline' 'unsafe-eval'; ` +
+          `style-src 'self' 'unsafe-inline'; ` +
+          `connect-src 'self' https://jsonplaceholder.typicode.com; ` +
+          `img-src 'self' data:; ` +
+          `font-src 'self' data:;`
+        ],
+      },
+    });
+  });
+
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -31,16 +45,16 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
-  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        'Content-Security-Policy': [
-          `default-src 'self' https://jsonplaceholder.typicode.com; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';`
-        ]
-      }
-    })
-  })
+  // mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+  //   callback({
+  //     responseHeaders: {
+  //       ...details.responseHeaders,
+  //       'Content-Security-Policy': [
+  //         `default-src 'self' http://localhost:8080/api/v1; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';`
+  //       ]
+  //     }
+  //   })
+  // })
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
